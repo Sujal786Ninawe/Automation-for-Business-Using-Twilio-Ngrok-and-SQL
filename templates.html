@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Automation Dashboard</title>
+    <style>
+        /* WhatsApp-themed styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #e5ddd5;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #075e54;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 24px;
+        }
+        section {
+            padding: 20px;
+        }
+        h2 {
+            color: #075e54;
+            border-bottom: 2px solid #25d366;
+            padding-bottom: 5px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background-color: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        li span {
+            font-weight: bold;
+            color: #075e54;
+            flex-grow: 1;
+        }
+        li button {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        li button:hover {
+            background-color: #cc0000;
+        }
+        #campaignForm {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #075e54;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 5px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #128c7e;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    WhatsApp Automation Dashboard 
+</header>
+
+<section>
+    <h2>Create New Campaign</h2>
+    <form id="campaignForm">
+        <label for="campaignName">Campaign Name:</label>
+        <input type="text" id="campaignName" placeholder="Enter campaign name" required>
+
+        <label for="campaignMessage">Message:</label>
+        <textarea id="campaignMessage" placeholder="Enter message content" rows="5" required></textarea>
+
+        <button type="submit">Create Campaign</button>
+    </form>
+
+    <h2>Existing Campaigns</h2>
+    <ul id="campaigns">
+        <li>Loading campaigns...</li>
+    </ul>
+</section>
+
+<script>
+const API_URL = '/campaign'; // Ensure this matches your Flask route
+
+// Fetch and display campaigns
+function loadCampaigns() {
+    fetch(API_URL, {
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to fetch campaigns');
+        return response.json();
+    })
+    .then(data => {
+        const campaignsList = document.getElementById('campaigns');
+        campaignsList.innerHTML = '';
+
+        if (data.length === 0) {
+            campaignsList.innerHTML = '<li>No campaigns found. Create one above!</li>';
+        } else {
+            data.forEach(campaign => {
+                const li = document.createElement('li');
+
+                const campaignText = document.createElement('span');
+                campaignText.textContent = `${campaign.name}: ${campaign.message}`;
+                li.appendChild(campaignText);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.onclick = () => deleteCampaign(campaign.id);
+
+                li.appendChild(deleteButton);
+                campaignsList.appendChild(li);
+            });
+        }
+    })
+    .catch(error => {
+        document.getElementById('campaigns').innerHTML = '<li>Error loading campaigns. Please try again.</li>';
+        console.error('Error loading campaigns:', error);
+    });
+}
+
+// Create new campaign
+document.getElementById('campaignForm').onsubmit = function(event) {
+    event.preventDefault();
+
+    const name = document.getElementById('campaignName').value;
+    const message = document.getElementById('campaignMessage').value;
+
+    fetch(API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        },
+        body: JSON.stringify({ name, message })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to create campaign');
+        return response.json();
+    })
+    .then(() => {
+        alert('Campaign created successfully!');
+        document.getElementById('campaignForm').reset();
+        loadCampaigns();
+    })
+    .catch(error => {
+        alert('Error creating campaign.');
+        console.error('Error:', error);
+    });
+};
+
+// Delete campaign
+function deleteCampaign(campaignId) {
+    if (!confirm('Are you sure you want to delete this campaign?')) return;
+
+    fetch(`${API_URL}/${campaignId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to delete campaign');
+        loadCampaigns();
+    })
+    .catch(error => {
+        alert('Error deleting campaign.');
+        console.error('Error:', error);
+    });
+}
+
+// Load campaigns on page load
+document.addEventListener('DOMContentLoaded', loadCampaigns);
+</script>
+
+</body>
+</html>
